@@ -5,4 +5,4 @@
   <br>
   <br>
 </h1>
-<h4 align="center">Utility plugin that relinks you to your previously connected server in a Velocity network.</h4>
+<h4 align="center">Utility plugin that will relink you to your previously connected server in a Velocity network.</h4>
