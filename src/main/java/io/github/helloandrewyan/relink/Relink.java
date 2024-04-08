@@ -1,5 +1,9 @@
 package io.github.helloandrewyan.relink;
 
+import co.aikar.idb.DB;
+import co.aikar.idb.Database;
+import co.aikar.idb.DatabaseOptions;
+import co.aikar.idb.PooledDatabaseOptions;
 import com.google.inject.Inject;
 import com.moandjiezana.toml.Toml;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
@@ -15,6 +19,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,13 +38,15 @@ public class Relink {
     private final ProxyServer server;
     private final Logger logger;
     private final Path directory;
-    private Toml config;
     private final Map<String, RegisteredServer> proxy = new HashMap<>();
+    private final List<String> ignored = new ArrayList<>();
+    private final List<String> linked = new ArrayList<>();
     private static final String CONFIG_FILE = "config.toml";
     private static final String CONFIG_PROXY_TABLE = "proxy";
     private static final String CONFIG_SQL_TABLE = "sql";
     private static final String CONFIG_IGNORED = "ignored";
     private static final String CONFIG_LINKED = "linked";
+    private Database database;
     @Inject
     public Relink(ProxyServer server, Logger logger, @DataDirectory Path directory) {
         this.server = server;
@@ -48,15 +56,17 @@ public class Relink {
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
         getProxy();
-        this.config = loadConfig();
+        Toml config = getConfig();
+        if (config == null || !validateProxy(config) || !validateSQL(config)) {
+            logger.warn("Plugin could not be properly loaded.");
+            return;
+        }
+
     }
     private void getProxy() {
-        server.getAllServers().forEach(server -> {
-            logger.info("Detected \"" + server.getServerInfo().getName() + "\" in proxy.");
-            proxy.put(server.getServerInfo().getName(), server);
-        });
+        server.getAllServers().forEach(server -> proxy.put(server.getServerInfo().getName(), server));
     }
-    private Toml loadConfig() {
+    private Toml getConfig() {
         File configFile = new File(directory.toFile(), CONFIG_FILE);
         try (InputStream resource = getClass().getResourceAsStream("/" + CONFIG_FILE)) {
             if (resource == null) {
@@ -78,30 +88,79 @@ public class Relink {
         }
     }
 
-    // TODO - Complete this defensive validation method.
-    private boolean isValidConfig(Toml config) {
+    // TODO - DRAFT IMPLEMENTATION
+    private boolean validateProxy(Toml config) {
         if (config.isEmpty()) {
             logger.warn("Configuration file is empty.");
             return false;
         }
-        if (!config.containsTable(CONFIG_PROXY_TABLE)) {
-            logger.warn("Proxy table is missing.");
+        if (config.getTable(CONFIG_PROXY_TABLE) == null) {
+           logger.warn("Missing TOML table [" + CONFIG_PROXY_TABLE + "]");
+           return false;
+        }
+
+        List<String> temp = config.getTable(CONFIG_PROXY_TABLE).getList(CONFIG_IGNORED);
+        if (temp == null) {
+            logger.warn("Missing TOML list \"" + CONFIG_IGNORED + "\"");
             return false;
         }
 
-        List<String> ignored = config.getTable(CONFIG_PROXY_TABLE).getList(CONFIG_IGNORED);
-        List<String> linked = config.getTable(CONFIG_PROXY_TABLE).getList(CONFIG_LINKED);
-        if (ignored == null) {
-            logger.warn("Proxy table is missing.");
-            return false;
-        }
-        for (String server : ignored) {
+        for (String server : temp) {
             if (!proxy.containsKey(server)) {
-                logger.warn("\"" + server + "\", does not exist in proxy. Ignoring.");
-                return false;
+                logger.warn("Could not find server \"" + server + "\". Ignoring.");
+                continue;
             }
+            ignored.add(server);
         }
 
-        return ignored.stream().allMatch(proxy::containsKey) && linked.stream().allMatch(proxy::containsKey);
+        temp = config.getTable(CONFIG_PROXY_TABLE).getList(CONFIG_LINKED);
+        if (temp == null) {
+            logger.warn("Missing TOML list \"" + CONFIG_LINKED + "\"");
+            return false;
+        }
+        for (String server : temp) {
+            if (!proxy.containsKey(server)) {
+                logger.warn("Could not find server \"" + server + "\". Ignoring.");
+                continue;
+            }
+            linked.add(server);
+        }
+
+        if (config.getTable(CONFIG_SQL_TABLE) == null) {
+            logger.warn("Missing TOML table [" + CONFIG_SQL_TABLE + "]");
+            return false;
+        }
+        return true;
+    }
+
+    // TODO - DRAFT IMPLEMENTATION
+    private boolean validateSQL(Toml config) {
+        String host = config.getTable(CONFIG_SQL_TABLE).getString("host");
+        Long port = config.getTable(CONFIG_SQL_TABLE).getLong("port");
+        String username = config.getTable(CONFIG_SQL_TABLE).getString("username");
+        String password = config.getTable(CONFIG_SQL_TABLE).getString("password");
+        String databaseName = config.getTable(CONFIG_SQL_TABLE).getString("database");
+
+        if (host == null || port == null || username == null || password == null || databaseName == null) {
+            logger.warn("SQL details were not properly set");
+            return false;
+        }
+
+        try {
+            DatabaseOptions options = DatabaseOptions.builder().mysql(
+                    username,
+                    password,
+                    databaseName,
+                    host + ":" + port
+            ).build();
+            database = PooledDatabaseOptions.builder().options(options).createHikariDatabase();
+            DB.setGlobalDatabase(database);
+
+            logger.info("Connection to Database was successfully made.");
+            return true;
+        } catch (Exception exception) {
+            logger.info("Connection to Database was not successful.");
+            return false;
+        }
     }
 }
