@@ -24,6 +24,26 @@ It will automatically relink players to their previously connected server within
 Upon loading the plugin for the first time, a default configuration file (`config.toml`) will be generated in the plugin folder. You can customize this configuration according to your preferences.
 
 ### Configuration Options
+```toml
+#####################################################
+
+[proxy]
+# Default values are based on the default servers
+# generated when creating new velocity network.
+linked = ["lobby", "factions", "minigames"]
+
+#####################################################
+
+[sql]
+url = ""
+username = ""
+password = ""
+
+#####################################################
+```
+
+
+
 - **Proxy Servers** (`[proxy]`)
     - Define the list of servers that are linked by Relink.
     - Default values are provided based on the default servers in the network upon first installation.
