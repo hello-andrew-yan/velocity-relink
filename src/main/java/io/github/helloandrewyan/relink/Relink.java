@@ -1,13 +1,9 @@
 package io.github.helloandrewyan.relink;
 
-import co.aikar.idb.DB;
-import co.aikar.idb.Database;
-import co.aikar.idb.DatabaseOptions;
-import co.aikar.idb.PooledDatabaseOptions;
 import com.google.inject.Inject;
 import com.moandjiezana.toml.Toml;
-import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.Subscribe;
+import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
@@ -19,6 +15,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,12 +36,17 @@ public class Relink {
     private final ProxyServer server;
     private final Logger logger;
     private final Path directory;
+
+    private Connection connection;
+
     private final Map<String, RegisteredServer> proxy = new HashMap<>();
     private final List<String> linked = new ArrayList<>();
+
     private static final String CONFIG_FILE = "config.toml";
     private static final String CONFIG_PROXY_TABLE = "proxy";
     private static final String CONFIG_SQL_TABLE = "sql";
     private static final String CONFIG_LINKED = "linked";
+
     @Inject
     public Relink(ProxyServer server, Logger logger, @DataDirectory Path directory) {
         this.server = server;
@@ -85,7 +88,7 @@ public class Relink {
             }
             return output;
         } catch (IOException exception) {
-            logger.warn("Failed to read configuration file: " + exception.getMessage());
+            logger.warn("Failed to read configuration file: {}", exception.getMessage());
             return null;
         }
     }
@@ -103,7 +106,7 @@ public class Relink {
 
         temp.stream()
                 .filter(server -> !proxy.containsKey(server))
-                .forEach(server -> logger.warn("Could not find server \"" + server + "\". Ignoring."));
+                .forEach(server -> logger.warn("Could not find server \"{}\". Ignoring.", server));
         linked.addAll(temp);
         return true;
     }
@@ -114,32 +117,26 @@ public class Relink {
             return false;
         }
 
-        String host = table.getString("host");
-        Long port = table.getLong("port");
+        String url = table.getString("url");
         String username = table.getString("username");
         String password = table.getString("password");
-        String databaseName = table.getString("database");
 
-        if (host == null || port == null || username == null || password == null || databaseName == null) {
+        if (url == null || username == null || password == null) {
             logger.warn("SQL details were not properly set");
             return false;
         }
-
         try {
-            DatabaseOptions options = DatabaseOptions.builder().mysql(
-                    username,
-                    password,
-                    databaseName,
-                    host + ":" + port
-            ).build();
-            // Singleton Pattern. Can be referenced using .getGlobalDatabase()
-            DB.setGlobalDatabase(
-                    PooledDatabaseOptions.builder().options(options).createHikariDatabase()
-            );
-            logger.info("Connection to Database was successfully made.");
-            return true;
+            Class.forName("com.mysql.cj.jdbc.Driver");
         } catch (Exception exception) {
-            logger.warn("Connection to Database was not successful: " + exception);
+            logger.warn("JDBC Driver not properly established: {}", exception.getMessage());
+            return false;
+        }
+        try {
+            connection = DriverManager.getConnection(url, username, password);
+            logger.warn("Database connection established.");
+            return true;
+        } catch (SQLException exception) {
+            logger.warn("Database connection could not be established: {}", exception.getMessage());
             return false;
         }
     }

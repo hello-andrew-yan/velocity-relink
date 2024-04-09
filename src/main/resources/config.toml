@@ -8,10 +8,8 @@ linked = ["lobby", "factions", "minigames"]
 #####################################################
 
 [sql]
-host = "localhost"
-port = 3306
-username = "root"
+url = ""
+username = ""
 password = ""
-database = "relink"
 
 #####################################################
