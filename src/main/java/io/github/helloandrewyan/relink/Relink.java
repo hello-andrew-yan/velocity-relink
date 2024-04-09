@@ -14,6 +14,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -162,16 +164,24 @@ public class Relink {
         }
 
         try {
-            URL databaseURL = new URL(url);
-            if (databaseURL.getProtocol().startsWith("jdbc:")) {
+            URI databaseURI = new URI(url);
+            String scheme = databaseURI.getScheme();
+            if (!"jdbc".equals(scheme)) {
                 throw new MalformedURLException("Database URL is invalid.");
             }
-            String protocol = databaseURL.getProtocol().substring(5);
+
+            String[] parts = databaseURI.getSchemeSpecificPart().split(":");
+            if (parts.length < 2) {
+                throw new MalformedURLException("Database URL is invalid.");
+            }
+            String protocol = parts[0];
+
             if (!SUPPORTED_PROTOCOLS.contains(protocol.toLowerCase())) {
                 throw new MalformedURLException("Unsupported database protocol.");
             }
-        } catch (MalformedURLException exception) {
+        } catch (URISyntaxException | MalformedURLException exception) {
             logger.info("Failed to validate database URL: " + exception.getMessage());
+            return false;
         }
 
         try {
