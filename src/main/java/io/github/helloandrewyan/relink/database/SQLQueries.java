@@ -1,7 +1,7 @@
 package io.github.helloandrewyan.relink.database;
 
 public class SQLQueries {
-    public static final String TABLE_NAME = "relink_table";
+    public static final String TABLE_NAME = "relink";
     public static final String UUID_COLUMN = "uuid";
     public static final String LAST_SERVER_COLUMN = "last_server";
     public static String TABLE_EXISTS_STATEMENT = "SELECT EXISTS ("
