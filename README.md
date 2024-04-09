@@ -5,7 +5,7 @@
   <br>
   <br>
 </h1>
-![Link Icon](assets/icon.png)
+![Link Icon](https://github.com/hello-andrew-yan/relink/tree/master/assets/icon.png)
 <p align="center"><a target="_blank" href="https://icons8.com/icon/102433/broken-link">Broken Link</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a></p>
 <h4 align="center">
 Relink is a utility plugin designed for Velocity, a proxy server for Minecraft.
