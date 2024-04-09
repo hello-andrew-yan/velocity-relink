@@ -16,7 +16,6 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -26,29 +25,37 @@ import java.util.*;
 
 /**
  * Relink is a utility plugin for <a href="https://velocitypowered.com/">Velocity</a>
- * that automatically will relink players to their previously connected server within the network.
+ * that will automatically will relink players to their previously connected server within the network.
  */
 @Plugin(
-        id = "relink",
-        name = "Relink",
-        version = "1.0-SNAPSHOT",
-        url = "https://github.com/hello-andrew-yan/relink",
-        description = "Utility plugin that will relink you to your previously connected server in a Velocity network.",
-        authors = {"hello-andrew-yan"}
+        id = Relink.ID,
+        name = Relink.NAME,
+        version = Relink.VERSION,
+        url = Relink.URL,
+        description = Relink.DESCRIPTION,
+        authors = {Relink.AUTHOR}
 )
 public class Relink {
-    private final ProxyServer server;
-    private final Logger logger;
-    private final Path directory;
-    private static Connection connection;
-    private final Map<String, RegisteredServer> proxy = new HashMap<>();
-    private final List<String> linked = new ArrayList<>();
+    public static final String ID = "relink";
+    public static final String NAME = "Relink";
+    public static final String VERSION = "1.0-SNAPSHOT";
+    public static final String URL = "https://github.com/hello-andrew-yan/relink";
+    public static final String DESCRIPTION =
+            "Utility plugin that will relink you to your previously connected server in a Velocity network.";
+    public static final String AUTHOR = "hello-andrew-yan";
     private static final String CONFIG_FILE = "config.toml";
     private static final String CONFIG_PROXY_TABLE = "proxy";
     private static final String CONFIG_LINKED = "linked";
     private static final String CONFIG_SQL_TABLE = "sql";
-    private static final String DRIVER = "com.mysql.cj.jdbc.Driver";
-    private static final Set<String> SUPPORTED_PROTOCOLS = new HashSet<>(Arrays.asList("mysql", "postgresql", "oracle"));
+    private static final String JDBC_SCHEME = "jdbc";
+    private static final Set<String> SUPPORTED_PROTOCOLS =
+            new HashSet<>(Arrays.asList("mysql", "postgresql", "oracle"));
+    private final ProxyServer server;
+    private final Logger logger;
+    private final Path directory;
+    private Connection connection;
+    private final Map<String, RegisteredServer> proxy = new HashMap<>();
+    private final List<String> linked = new ArrayList<>();
 
     @Inject
     public Relink(ProxyServer server, Logger logger, @DataDirectory Path directory) {
@@ -56,48 +63,37 @@ public class Relink {
         this.logger = logger;
         this.directory = directory;
     }
+
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
         loadProxy();
-
         Toml config = getConfig();
-        if (config == null || config.isEmpty() || !validateProxy(config) || !loadDatabase(config)) {
+        if (config == null || config.isEmpty() || !validateProxy(config) || !validateSQL(config)) {
             logger.warn("Plugin could not be properly loaded.");
             return;
         }
-
-        // TODO - TEMPORARY SAFE CLOSING HERE
         try {
-            connection.close();
+            if (connection != null && !connection.isClosed()) {
+                connection.close();
+            }
         } catch (SQLException exception) {
-            logger.warn("Connection failed to close: " + exception.getMessage());
+            logger.warn("Connection failed to close: {}", exception.getMessage());
         }
     }
-    /**
-     * Loads all registered servers in the velocity network into the proxy map.
-     */
+
     private void loadProxy() {
         server.getAllServers().forEach(server -> proxy.put(server.getServerInfo().getName(), server));
     }
 
-    /**
-     * Reads and retrieves the configuration from the config file.
-     *
-     * @return the {@link Toml} configuration object
-     */
     private Toml getConfig() {
         File configFile = new File(directory.toFile(), CONFIG_FILE);
         try (InputStream resource = getClass().getResourceAsStream("/" + CONFIG_FILE)) {
-            // Defensive check in case resources is not properly established in pom.xml
             if (resource == null) {
-                logger.warn("Resource " + CONFIG_FILE + " not found. Contact developer.");
+                logger.warn("Resource {} not found. Contact developer.", CONFIG_FILE);
                 return null;
             }
-            // Creates the plugin directory if it doesn't exist.
             Files.createDirectories(configFile.getParentFile().toPath());
-
             if (!configFile.exists()) {
-                // Copies the resource config file to new file.
                 Files.copy(resource, configFile.toPath());
                 logger.info("Copying new configuration file from resources.");
             }
@@ -108,52 +104,36 @@ public class Relink {
         }
     }
 
-    /**
-     * Validates the proxy configuration from the TOML file.
-     *
-     * @param config the {@link Toml} configuration object
-     * @return       {@code true} if the proxy configuration is valid, {@code false} otherwise
-     */
     private boolean validateProxy(Toml config) {
         logger.info("Validating proxy configuration...");
         Toml proxyTable = config.getTable(CONFIG_PROXY_TABLE);
         if (proxyTable == null) {
-            logger.warn("Missing TOML table [" + CONFIG_PROXY_TABLE + "]");
+            logger.warn("Missing TOML table [{}].", CONFIG_PROXY_TABLE);
             return false;
         }
         List<String> temp = proxyTable.getList(CONFIG_LINKED);
         if (temp == null) {
-            logger.warn("Missing TOML list \"" + CONFIG_LINKED + "\"");
+            logger.warn("Missing TOML list \"{}\".", CONFIG_LINKED);
             return false;
         }
-
         temp.stream()
                 .filter(server -> !proxy.containsKey(server))
-                .forEach(server -> logger.warn("Could not find server \"{}\". Ignoring.", server));
+                .forEach(server -> logger.warn("Could not find server \"{}\". Skipping.", server));
         linked.addAll(temp);
-
         if (linked.isEmpty()) {
             logger.warn("No servers have been linked to Relink configuration.");
             return false;
         }
-
         return true;
     }
 
-    /**
-     * Loads the database configuration from the TOML file and establishes a connection to the database.
-     *
-     * @param config the {@link Toml} configuration object
-     * @return       {@code true} if the database connection is successfully established, {@code false} otherwise
-     */
-    private boolean loadDatabase(Toml config) {
+    private boolean validateSQL(Toml config) {
         logger.info("Validating SQL configuration...");
         Toml table = config.getTable(CONFIG_SQL_TABLE);
         if (table == null) {
-            logger.warn("Missing TOML table [" + CONFIG_SQL_TABLE + "]");
+            logger.warn("Missing TOML table [{}]", CONFIG_SQL_TABLE);
             return false;
         }
-
         String url = table.getString("url");
         String username = table.getString("username");
         String password = table.getString("password");
@@ -162,34 +142,31 @@ public class Relink {
             logger.warn("SQL details were not properly set");
             return false;
         }
+        if (!validateDatabaseURL(url)) return false;
+        return loadDatabase(url, username, password);
+    }
 
+    private boolean validateDatabaseURL(String url) {
         try {
             URI databaseURI = new URI(url);
-            String scheme = databaseURI.getScheme();
-            if (!"jdbc".equals(scheme)) {
+            if (!JDBC_SCHEME.equals(databaseURI.getScheme())) {
                 throw new MalformedURLException("Database URL is invalid.");
             }
-
             String[] parts = databaseURI.getSchemeSpecificPart().split(":");
             if (parts.length < 2) {
-                throw new MalformedURLException("Database URL is invalid.");
+                throw new MalformedURLException("Database URL is missing protocol details.");
             }
-            String protocol = parts[0];
-
-            if (!SUPPORTED_PROTOCOLS.contains(protocol.toLowerCase())) {
+            if (!SUPPORTED_PROTOCOLS.contains(parts[0].toLowerCase())) {
                 throw new MalformedURLException("Unsupported database protocol.");
             }
         } catch (URISyntaxException | MalformedURLException exception) {
-            logger.info("Failed to validate database URL: " + exception.getMessage());
+            logger.info("Failed to validate database URL: {}", exception.getMessage());
             return false;
         }
+        return true;
+    }
 
-        try {
-            Class.forName(DRIVER);
-        } catch (Exception exception) {
-            logger.warn("JDBC Driver not properly established: {}", exception.getMessage());
-            return false;
-        }
+    private boolean loadDatabase(String url, String username, String password) {
         try {
             connection = DriverManager.getConnection(url, username, password);
             logger.info("Database connection established.");
@@ -200,12 +177,14 @@ public class Relink {
         }
     }
 
-    public static Connection getConnection() {
+    public Connection getConnection() {
         return connection;
     }
+
     public List<String> getLinked() {
         return linked;
     }
+
     public RegisteredServer getServer(String server) {
         return proxy.get(server);
     }
