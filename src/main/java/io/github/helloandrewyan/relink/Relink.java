@@ -37,7 +37,7 @@ public class Relink {
     private final Logger logger;
     private final Path directory;
 
-    private Connection connection;
+    private static Connection connection;
 
     private final Map<String, RegisteredServer> proxy = new HashMap<>();
     private final List<String> linked = new ArrayList<>();
@@ -46,6 +46,7 @@ public class Relink {
     private static final String CONFIG_PROXY_TABLE = "proxy";
     private static final String CONFIG_SQL_TABLE = "sql";
     private static final String CONFIG_LINKED = "linked";
+    private static final String DRIVER = "com.mysql.cj.jdbc.Driver";
 
     @Inject
     public Relink(ProxyServer server, Logger logger, @DataDirectory Path directory) {
@@ -55,7 +56,6 @@ public class Relink {
     }
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
-        logger.info("Loading plugin.");
         loadProxy();
         if (getConfig() == null || !validateProxy(getConfig()) || !loadDatabase(getConfig())) {
             logger.warn("Plugin could not be properly loaded.");
@@ -126,18 +126,22 @@ public class Relink {
             return false;
         }
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
+            Class.forName(DRIVER);
         } catch (Exception exception) {
             logger.warn("JDBC Driver not properly established: {}", exception.getMessage());
             return false;
         }
         try {
             connection = DriverManager.getConnection(url, username, password);
-            logger.warn("Database connection established.");
+            logger.info("Database connection established.");
             return true;
         } catch (SQLException exception) {
             logger.warn("Database connection could not be established: {}", exception.getMessage());
             return false;
         }
+    }
+
+    public static Connection getConnection() {
+        return connection;
     }
 }
