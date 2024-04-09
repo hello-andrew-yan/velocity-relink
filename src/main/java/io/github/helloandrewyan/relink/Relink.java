@@ -11,6 +11,7 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import io.github.helloandrewyan.relink.database.DatabaseManager;
 import io.github.helloandrewyan.relink.database.SQLExecutor;
+import io.github.helloandrewyan.relink.listeners.ConnectionListener;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -55,7 +56,7 @@ public class Relink {
     private final ProxyServer server;
     private final Path directory;
     private final Map<String, RegisteredServer> proxy = new HashMap<>();
-    private final List<String> linked = new ArrayList<>();
+    private static final List<String> linked = new ArrayList<>();
     private DatabaseManager databaseManager;
 
     @Inject
@@ -68,17 +69,17 @@ public class Relink {
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
         getProxyServers();
+
         Toml config = getConfig();
-        if (config == null || config.isEmpty() || !validateProxy(config) || !validateSQL(config)) {
-            logger.warn("Plugin could not be properly loaded.");
-            return;
-        }
-        Toml table = config.getTable(CONFIG_SQL_TABLE);
-        String url = table.getString("url");
-        String username = table.getString("username");
-        String password = table.getString("password");
+        if (config == null || config.isEmpty() || !validateProxy(config) || !validateSQL(config)) return;
+
+        String url = config.getTable(CONFIG_SQL_TABLE).getString("url");
+        String username = config.getTable(CONFIG_SQL_TABLE).getString("username");
+        String password = config.getTable(CONFIG_SQL_TABLE).getString("password");
+
         databaseManager = new DatabaseManager(url, username, password);
         sqlExecutor = new SQLExecutor(databaseManager);
+        server.getEventManager().register(this, new ConnectionListener());
     }
 
     @Subscribe
@@ -111,7 +112,6 @@ public class Relink {
     }
 
     private boolean validateProxy(Toml config) {
-        logger.info("Validating proxy configuration...");
         Toml proxyTable = config.getTable(CONFIG_PROXY_TABLE);
         if (proxyTable == null) {
             logger.warn("Missing TOML table [{}].", CONFIG_PROXY_TABLE);
@@ -134,7 +134,6 @@ public class Relink {
     }
 
     private boolean validateSQL(Toml config) {
-        logger.info("Validating SQL configuration...");
         Toml table = config.getTable(CONFIG_SQL_TABLE);
         if (table == null) {
             logger.warn("Missing TOML table [{}]", CONFIG_SQL_TABLE);
@@ -171,7 +170,7 @@ public class Relink {
         return true;
     }
 
-    public List<String> getLinked() {
+    public static List<String> getLinked() {
         return linked;
     }
     public RegisteredServer getServer(String server) {
