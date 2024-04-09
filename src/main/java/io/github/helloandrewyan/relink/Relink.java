@@ -12,6 +12,7 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
 import io.github.helloandrewyan.relink.database.DatabaseManager;
 import io.github.helloandrewyan.relink.database.SQLExecutor;
 import io.github.helloandrewyan.relink.listeners.ConnectionListener;
+import io.github.helloandrewyan.relink.temp.Test;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -80,6 +81,9 @@ public class Relink {
         databaseManager = new DatabaseManager(url, username, password);
         sqlExecutor = new SQLExecutor(databaseManager);
         server.getEventManager().register(this, new ConnectionListener());
+
+        Test test = new Test();
+        test.testExecutor();
     }
 
     @Subscribe

@@ -7,6 +7,8 @@ import java.util.UUID;
 
 public class SQLExecutor {
     private Connection connection;
+    private PreparedStatement statement;
+    private ResultSet resultSet;
 
     public SQLExecutor(DatabaseManager databaseManager) {
         try {
@@ -16,15 +18,22 @@ public class SQLExecutor {
             Relink.getLogger().warn("Failed to create statement from connection: {}", exception.getMessage());
         }
     }
+
+    private void closeResources() {
+        try {
+            if (resultSet != null) resultSet.close();
+            if (statement != null) statement.close();
+        } catch (SQLException exception) {
+            Relink.getLogger().warn("Failed to close database resources: {}", exception.getMessage());
+        }
+    }
+
     private void initialiseTable() {
         try {
-            PreparedStatement statement = connection.prepareStatement(SQLQueries.TABLE_EXISTS_STATEMENT);
-            statement.setString(1, connection.getSchema());
+            statement = connection.prepareStatement(SQLQueries.TABLE_EXISTS_STATEMENT);
+            statement.setString(1, connection.getCatalog());
             statement.setString(2, SQLQueries.TABLE_NAME);
-
-            ResultSet resultSet = statement.executeQuery();
-            statement.close();
-
+            resultSet = statement.executeQuery();
             boolean tableExists = resultSet.next() && resultSet.getBoolean("table_exists");
             if (!tableExists) {
                 Relink.getLogger().info("Relink table not found. Generating new table.");
@@ -32,51 +41,53 @@ public class SQLExecutor {
             } else {
                 Relink.getLogger().info("Relink table found.");
             }
-
-            resultSet.close();
         } catch (SQLException exception) {
             Relink.getLogger().warn("Failed to create table: {}", exception.getMessage());
+        } finally {
+            closeResources();
         }
     }
+
     public void insertUserConnection(UUID uuid, String lastServer) {
         try {
-            PreparedStatement statement = connection.prepareStatement(SQLQueries.INSERT_DUPLICATE_KEY_STATEMENT);
+            statement = connection.prepareStatement(SQLQueries.INSERT_DUPLICATE_KEY_STATEMENT);
             statement.setString(1, uuid.toString());
             statement.setString(2, lastServer);
-            statement.executeQuery();
-            statement.close();
+            statement.executeUpdate();
         } catch (SQLException exception) {
             Relink.getLogger().warn("Failed to insert into table: {}", exception.getMessage());
+        } finally {
+            closeResources();
         }
     }
+
     public void deleteUserConnection(UUID uuid) {
         try {
-            PreparedStatement statement = connection.prepareStatement(SQLQueries.DELETE_STATEMENT);
+            statement = connection.prepareStatement(SQLQueries.DELETE_STATEMENT);
             statement.setString(1, uuid.toString());
-            statement.executeQuery();
-            statement.close();
+            statement.executeUpdate();
         } catch (SQLException exception) {
             Relink.getLogger().warn("Failed to remove UUID from table: {}", exception.getMessage());
+        } finally {
+            closeResources();
         }
     }
 
     public String getUserConnection(UUID uuid) {
         try {
-            PreparedStatement statement = connection.prepareStatement(SQLQueries.SELECT_STATEMENT);
+            statement = connection.prepareStatement(SQLQueries.SELECT_STATEMENT);
             statement.setString(1, uuid.toString());
-
-            ResultSet resultSet = statement.executeQuery();
-            statement.close();
+            resultSet = statement.executeQuery();
 
             if (resultSet.next()) {
-                resultSet.close();
-                return resultSet.getString(SQLQueries.UUID_COLUMN);
+                return resultSet.getString(SQLQueries.LAST_SERVER_COLUMN);
             }
-            resultSet.close();
             return null;
         } catch (SQLException exception) {
-            Relink.getLogger().warn("Failed to insert into table: {}", exception.getMessage());
+            Relink.getLogger().warn("Failed to query user connection: {}", exception.getMessage());
             return null;
+        } finally {
+            closeResources();
         }
     }
 }
