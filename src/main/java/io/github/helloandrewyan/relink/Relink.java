@@ -4,10 +4,13 @@ import com.google.inject.Inject;
 import com.moandjiezana.toml.Toml;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
+import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
+import io.github.helloandrewyan.relink.database.DatabaseManager;
+import io.github.helloandrewyan.relink.database.SQLExecutor;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -18,9 +21,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -50,38 +50,44 @@ public class Relink {
     private static final String JDBC_SCHEME = "jdbc";
     private static final Set<String> SUPPORTED_PROTOCOLS =
             new HashSet<>(Arrays.asList("mysql", "postgresql", "oracle"));
+    private static Logger logger;
+    private static SQLExecutor sqlExecutor;
     private final ProxyServer server;
-    private final Logger logger;
     private final Path directory;
-    private Connection connection;
     private final Map<String, RegisteredServer> proxy = new HashMap<>();
     private final List<String> linked = new ArrayList<>();
+    private DatabaseManager databaseManager;
 
     @Inject
-    public Relink(ProxyServer server, Logger logger, @DataDirectory Path directory) {
+    public Relink(Logger logger, ProxyServer server, @DataDirectory Path directory) {
+        Relink.logger = logger;
         this.server = server;
-        this.logger = logger;
         this.directory = directory;
     }
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
-        loadProxy();
+        getProxyServers();
         Toml config = getConfig();
         if (config == null || config.isEmpty() || !validateProxy(config) || !validateSQL(config)) {
             logger.warn("Plugin could not be properly loaded.");
             return;
         }
-        try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-            }
-        } catch (SQLException exception) {
-            logger.warn("Connection failed to close: {}", exception.getMessage());
-        }
+        Toml table = config.getTable(CONFIG_SQL_TABLE);
+        String url = table.getString("url");
+        String username = table.getString("username");
+        String password = table.getString("password");
+        databaseManager = new DatabaseManager(url, username, password);
+        sqlExecutor = new SQLExecutor(databaseManager);
     }
 
-    private void loadProxy() {
+    @Subscribe
+    public void onProxyShutdown(ProxyShutdownEvent event) {
+        logger.info("Shutting down database connection.");
+        databaseManager.closeConnection();
+    }
+
+    private void getProxyServers() {
         server.getAllServers().forEach(server -> proxy.put(server.getServerInfo().getName(), server));
     }
 
@@ -142,8 +148,7 @@ public class Relink {
             logger.warn("SQL details were not properly set");
             return false;
         }
-        if (!validateDatabaseURL(url)) return false;
-        return loadDatabase(url, username, password);
+        return validateDatabaseURL(url);
     }
 
     private boolean validateDatabaseURL(String url) {
@@ -166,26 +171,16 @@ public class Relink {
         return true;
     }
 
-    private boolean loadDatabase(String url, String username, String password) {
-        try {
-            connection = DriverManager.getConnection(url, username, password);
-            logger.info("Database connection established.");
-            return true;
-        } catch (SQLException exception) {
-            logger.warn("Database connection could not be established: {}", exception.getMessage());
-            return false;
-        }
-    }
-
-    public Connection getConnection() {
-        return connection;
-    }
-
     public List<String> getLinked() {
         return linked;
     }
-
     public RegisteredServer getServer(String server) {
         return proxy.get(server);
+    }
+    public static Logger getLogger() {
+        return logger;
+    }
+    public static SQLExecutor getSqlExecutor() {
+        return sqlExecutor;
     }
 }
