@@ -3,8 +3,6 @@
 [proxy]
 # Default values are based on the default servers
 # generated when creating new velocity network.
-
-ignored = []
 linked = ["lobby", "factions", "minigames"]
 
 #####################################################

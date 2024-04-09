@@ -39,14 +39,11 @@ public class Relink {
     private final Logger logger;
     private final Path directory;
     private final Map<String, RegisteredServer> proxy = new HashMap<>();
-    private final List<String> ignored = new ArrayList<>();
     private final List<String> linked = new ArrayList<>();
     private static final String CONFIG_FILE = "config.toml";
     private static final String CONFIG_PROXY_TABLE = "proxy";
     private static final String CONFIG_SQL_TABLE = "sql";
-    private static final String CONFIG_IGNORED = "ignored";
     private static final String CONFIG_LINKED = "linked";
-    private Database database;
     @Inject
     public Relink(ProxyServer server, Logger logger, @DataDirectory Path directory) {
         this.server = server;
@@ -55,25 +52,25 @@ public class Relink {
     }
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
-        getProxy();
-        Toml config = getConfig();
-        if (config == null || !validateProxy(config) || !validateSQL(config)) {
+        logger.info("Loading plugin.");
+        loadProxy();
+        if (getConfig() == null || !validateProxy(getConfig()) || !loadDatabase(getConfig())) {
             logger.warn("Plugin could not be properly loaded.");
             return;
         }
-
     }
-    private void getProxy() {
+    private void loadProxy() {
         server.getAllServers().forEach(server -> proxy.put(server.getServerInfo().getName(), server));
     }
     private Toml getConfig() {
         File configFile = new File(directory.toFile(), CONFIG_FILE);
         try (InputStream resource = getClass().getResourceAsStream("/" + CONFIG_FILE)) {
+            // Defensive check in case resources is not properly established in pom.xml
             if (resource == null) {
                 logger.warn("Resource " + CONFIG_FILE + " not found. Contact developer.");
                 return null;
             }
-            // Create the directory if it doesn't exist.
+            // Creates the plugin directory if it doesn't exist.
             Files.createDirectories(configFile.getParentFile().toPath());
 
             if (!configFile.exists()) {
@@ -81,65 +78,47 @@ public class Relink {
                 Files.copy(resource, configFile.toPath());
                 logger.info("Copying new configuration file from resources.");
             }
-            return new Toml().read(configFile);
+            Toml output = new Toml().read(configFile);
+            if (output.isEmpty()) {
+                logger.warn("Configuration file is empty.");
+                return null;
+            }
+            return output;
         } catch (IOException exception) {
             logger.warn("Failed to read configuration file: " + exception.getMessage());
             return null;
         }
     }
-
-    // TODO - DRAFT IMPLEMENTATION
     private boolean validateProxy(Toml config) {
-        if (config.isEmpty()) {
-            logger.warn("Configuration file is empty.");
+        Toml proxyTable = config.getTable(CONFIG_PROXY_TABLE);
+        if (proxyTable == null) {
+            logger.warn("Missing TOML table [" + CONFIG_PROXY_TABLE + "]");
             return false;
         }
-        if (config.getTable(CONFIG_PROXY_TABLE) == null) {
-           logger.warn("Missing TOML table [" + CONFIG_PROXY_TABLE + "]");
-           return false;
-        }
-
-        List<String> temp = config.getTable(CONFIG_PROXY_TABLE).getList(CONFIG_IGNORED);
-        if (temp == null) {
-            logger.warn("Missing TOML list \"" + CONFIG_IGNORED + "\"");
-            return false;
-        }
-
-        for (String server : temp) {
-            if (!proxy.containsKey(server)) {
-                logger.warn("Could not find server \"" + server + "\". Ignoring.");
-                continue;
-            }
-            ignored.add(server);
-        }
-
-        temp = config.getTable(CONFIG_PROXY_TABLE).getList(CONFIG_LINKED);
+        List<String> temp = proxyTable.getList(CONFIG_LINKED);
         if (temp == null) {
             logger.warn("Missing TOML list \"" + CONFIG_LINKED + "\"");
             return false;
         }
-        for (String server : temp) {
-            if (!proxy.containsKey(server)) {
-                logger.warn("Could not find server \"" + server + "\". Ignoring.");
-                continue;
-            }
-            linked.add(server);
-        }
 
-        if (config.getTable(CONFIG_SQL_TABLE) == null) {
+        temp.stream()
+                .filter(server -> !proxy.containsKey(server))
+                .forEach(server -> logger.warn("Could not find server \"" + server + "\". Ignoring."));
+        linked.addAll(temp);
+        return true;
+    }
+    private boolean loadDatabase(Toml config) {
+        Toml table = config.getTable(CONFIG_SQL_TABLE);
+        if (table == null) {
             logger.warn("Missing TOML table [" + CONFIG_SQL_TABLE + "]");
             return false;
         }
-        return true;
-    }
 
-    // TODO - DRAFT IMPLEMENTATION
-    private boolean validateSQL(Toml config) {
-        String host = config.getTable(CONFIG_SQL_TABLE).getString("host");
-        Long port = config.getTable(CONFIG_SQL_TABLE).getLong("port");
-        String username = config.getTable(CONFIG_SQL_TABLE).getString("username");
-        String password = config.getTable(CONFIG_SQL_TABLE).getString("password");
-        String databaseName = config.getTable(CONFIG_SQL_TABLE).getString("database");
+        String host = table.getString("host");
+        Long port = table.getLong("port");
+        String username = table.getString("username");
+        String password = table.getString("password");
+        String databaseName = table.getString("database");
 
         if (host == null || port == null || username == null || password == null || databaseName == null) {
             logger.warn("SQL details were not properly set");
@@ -153,13 +132,14 @@ public class Relink {
                     databaseName,
                     host + ":" + port
             ).build();
-            database = PooledDatabaseOptions.builder().options(options).createHikariDatabase();
-            DB.setGlobalDatabase(database);
-
+            // Singleton Pattern. Can be referenced using .getGlobalDatabase()
+            DB.setGlobalDatabase(
+                    PooledDatabaseOptions.builder().options(options).createHikariDatabase()
+            );
             logger.info("Connection to Database was successfully made.");
             return true;
         } catch (Exception exception) {
-            logger.info("Connection to Database was not successful.");
+            logger.warn("Connection to Database was not successful: " + exception);
             return false;
         }
     }
