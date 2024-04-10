@@ -3,15 +3,15 @@
 </p>
 <h1 align="center">
   Relink
-  <br>
-  <br>
 </h1>
+<br>
 <p align="center">
-  <a target="_blank" href="https://icons8.com/icon/102433/broken-link">Broken Link</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a></p>
-<h4 align="center">
-Relink is a utility plugin designed for Velocity, a proxy server for Minecraft.
-It will automatically relink players to their previously connected server within the network seamlessly.
-</h4>
+  <a target="_blank" href="https://icons8.com/icon/102433/broken-link">Broken Link</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
+  <br>
+  <br>
+  Relink is a utility plugin designed for Velocity, a proxy server for Minecraft.
+  It will automatically relink players to their previously connected server within the network seamlessly.
+</p>
 
 ---
 
