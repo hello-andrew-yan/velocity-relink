@@ -59,7 +59,7 @@ public class Relink {
     private static LocalDataExecutor localDataExectutor;
     private final ProxyServer server;
     private final Path directory;
-    private final Map<String, RegisteredServer> proxy = new HashMap<>();
+    private static final Map<String, RegisteredServer> proxy = new HashMap<>();
     private static final List<String> linked = new ArrayList<>();
     private DatabaseManager databaseManager;
 
@@ -198,7 +198,7 @@ public class Relink {
     public static List<String> getLinked() {
         return linked;
     }
-    public RegisteredServer getServer(String server) {
+    public static RegisteredServer getServer(String server) {
         return proxy.get(server);
     }
     public static Logger getLogger() {

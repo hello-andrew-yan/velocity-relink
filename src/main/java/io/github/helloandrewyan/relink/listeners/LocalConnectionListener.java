@@ -1,13 +1,27 @@
 package io.github.helloandrewyan.relink.listeners;
 
 import com.velocitypowered.api.event.Subscribe;
+import com.velocitypowered.api.event.connection.LoginEvent;
 import com.velocitypowered.api.event.connection.PostLoginEvent;
 import com.velocitypowered.api.event.player.ServerPostConnectEvent;
+import com.velocitypowered.api.proxy.server.RegisteredServer;
 import io.github.helloandrewyan.relink.Relink;
+import net.kyori.adventure.text.Component;
 
 import java.util.UUID;
 
 public class LocalConnectionListener {
+
+    // TODO - EXPERIMENTAL METHOD
+    @Subscribe
+    private void onProxyConnect(LoginEvent event) {
+        String connection = Relink.getLocalDataExecutor().getUserConnection(event.getPlayer().getUniqueId());
+        RegisteredServer relink = Relink.getServer(connection);
+
+        event.getPlayer().disconnect(Component.empty());
+        event.getPlayer().createConnectionRequest(relink);
+    }
+
     @Subscribe
     private void validateConnection(PostLoginEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
