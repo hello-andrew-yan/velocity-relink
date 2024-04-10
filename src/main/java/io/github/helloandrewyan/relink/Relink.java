@@ -15,7 +15,6 @@ import io.github.helloandrewyan.relink.data.sql.SQLExecutor;
 import io.github.helloandrewyan.relink.listeners.KickListener;
 import io.github.helloandrewyan.relink.listeners.LocalConnectionListener;
 import io.github.helloandrewyan.relink.listeners.SQLConnectionListener;
-import io.github.helloandrewyan.relink.temp.Test;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -76,23 +75,34 @@ public class Relink {
         getProxyServers();
 
         Toml config = getConfig();
-        if (config == null || config.isEmpty() || !validateProxy(config) || !validateSQL(config)) return;
+        if (config == null || config.isEmpty() || !validateProxy(config)) return;
 
+        server.getEventManager().register(this, new KickListener());
+
+        if (!validateSQL(config)) {
+            loadLocal();
+            return;
+        }
+        loadSQL(config);
+        if (databaseManager.getConnection() == null) {
+            loadLocal();
+        }
+    }
+
+    private void loadLocal() {
+        logger.info("SQL connection could not be made, switching to local file.");
+        localDataExectutor = new LocalDataExecutor(directory);
+        server.getEventManager().register(this, new LocalConnectionListener());
+    }
+
+    private void loadSQL(Toml config) {
         String url = config.getTable(CONFIG_SQL_TABLE).getString("url");
         String username = config.getTable(CONFIG_SQL_TABLE).getString("username");
         String password = config.getTable(CONFIG_SQL_TABLE).getString("password");
 
         databaseManager = new DatabaseManager(url, username, password);
-        server.getEventManager().register(this, new KickListener());
-
-        if (databaseManager.getConnection() == null) {
-            logger.info("SQL connection could not be made, switching to local file.");
-            localDataExectutor = new LocalDataExecutor(directory);
-            server.getEventManager().register(this, new LocalConnectionListener());
-        } else {
-            sqlExecutor = new SQLExecutor(databaseManager);
-            server.getEventManager().register(this, new SQLConnectionListener());
-        }
+        sqlExecutor = new SQLExecutor(databaseManager);
+        server.getEventManager().register(this, new SQLConnectionListener());
     }
 
     @Subscribe
