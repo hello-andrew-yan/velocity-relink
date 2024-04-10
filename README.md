@@ -59,6 +59,8 @@ password = ""
 2137687a-e10d-462b-b574-86d309277146 = "hub"
 ```
 
+Users are stored via their UUID's followed by the name of the server under the Velocity network they last connected to before disconnecting.
+
 ## Usage
 Users need to specify which servers are linked by Relink in the `[proxy]` table accordingly. Once configured, Relink will seamlessly relink players to their last visited server within the network. To retrieve the name of servers in your velocity network, check your `velocity.toml` configuration file in your velocity proxy under the `[servers]` table.
 
