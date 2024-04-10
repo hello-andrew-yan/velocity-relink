@@ -16,7 +16,7 @@ It will automatically relink players to their previously connected server within
 ---
 
 ## Installation
-1. Download the `relink.jar` file from this repository.
+1. Download the most recent release of the `relink.jar` file from this repository.
 2. Copy the `relink.jar` file into the plugins folder of your velocity network.
 3. Restart the Velocity network to load the plugin.
 
