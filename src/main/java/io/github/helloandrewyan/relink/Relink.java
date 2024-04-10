@@ -12,6 +12,7 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
 import io.github.helloandrewyan.relink.data.local.LocalDataExecutor;
 import io.github.helloandrewyan.relink.data.sql.DatabaseManager;
 import io.github.helloandrewyan.relink.data.sql.SQLExecutor;
+import io.github.helloandrewyan.relink.listeners.KickListener;
 import io.github.helloandrewyan.relink.listeners.LocalConnectionListener;
 import io.github.helloandrewyan.relink.listeners.SQLConnectionListener;
 import io.github.helloandrewyan.relink.temp.Test;
@@ -81,25 +82,22 @@ public class Relink {
         String username = config.getTable(CONFIG_SQL_TABLE).getString("username");
         String password = config.getTable(CONFIG_SQL_TABLE).getString("password");
 
-        Test test = new Test();
         databaseManager = new DatabaseManager(url, username, password);
+        server.getEventManager().register(this, new KickListener());
 
         if (databaseManager.getConnection() == null) {
             logger.info("SQL connection could not be made, switching to local file.");
             localDataExectutor = new LocalDataExecutor(directory);
             server.getEventManager().register(this, new LocalConnectionListener());
-            test.testLocalExecutor();
-            return;
+        } else {
+            sqlExecutor = new SQLExecutor(databaseManager);
+            server.getEventManager().register(this, new SQLConnectionListener());
         }
-
-        sqlExecutor = new SQLExecutor(databaseManager);
-        server.getEventManager().register(this, new SQLConnectionListener());
-        test.testSQLExecutor();
     }
 
     @Subscribe
     public void onProxyShutdown(ProxyShutdownEvent event) {
-        if (databaseManager != null) {
+        if (databaseManager.getConnection() != null) {
             logger.info("Shutting down database connection.");
             databaseManager.closeConnection();
         }

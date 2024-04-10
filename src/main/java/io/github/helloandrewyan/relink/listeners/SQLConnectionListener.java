@@ -2,7 +2,6 @@ package io.github.helloandrewyan.relink.listeners;
 
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.PostLoginEvent;
-import com.velocitypowered.api.event.player.KickedFromServerEvent;
 import com.velocitypowered.api.event.player.ServerConnectedEvent;
 import io.github.helloandrewyan.relink.Relink;
 
@@ -29,13 +28,5 @@ public class SQLConnectionListener {
         }
         UUID uuid = event.getPlayer().getUniqueId();
         Relink.getSqlExecutor().insertUserConnection(uuid, connection);
-    }
-
-    // TODO - Fix certain kicking issues.
-    @Subscribe
-    private void onServerKick(KickedFromServerEvent event)  {
-        if (event.getServerKickReason().isPresent()) {
-            event.getPlayer().disconnect(event.getServerKickReason().get());
-        }
     }
 }

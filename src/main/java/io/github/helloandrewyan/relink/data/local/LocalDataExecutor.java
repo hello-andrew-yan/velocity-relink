@@ -32,7 +32,7 @@ public class LocalDataExecutor {
             }
             return new Toml().read(configFile);
         } catch (IOException exception) {
-            Relink.getLogger().warn("Failed to read data file: {}", exception.getMessage());
+            Relink.getLogger().warn("Failed to retrieve data file: {}", exception.getMessage());
             return null;
         }
     }
