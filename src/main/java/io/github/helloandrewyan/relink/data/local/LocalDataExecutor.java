@@ -6,7 +6,6 @@ import io.github.helloandrewyan.relink.Relink;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -22,19 +21,14 @@ public class LocalDataExecutor {
         this.directory = directory;
         this.dataFile = getData();
     }
-    // TODO - Remove duplicated code instance in Relink and LocalDataManager.
-    //        Pull method into separate file managing class.
+
     private Toml getData() {
-        File configFile = new File(directory.toFile(), DATA_FILE);
-        try (InputStream resource = getClass().getResourceAsStream("/" + DATA_FILE)) {
-            if (resource == null) {
-                Relink.getLogger().warn("Resource {} not found. Contact developer.", DATA_FILE);
-                return null;
-            }
+        try {
+            File configFile = new File(directory.toFile(), DATA_FILE);
             Files.createDirectories(configFile.getParentFile().toPath());
             if (!configFile.exists()) {
-                Files.copy(resource, configFile.toPath());
-                Relink.getLogger().info("Copying new data file from resources.");
+                Relink.getLogger().info("Creating new data file");
+                Files.createFile(configFile.toPath());
             }
             return new Toml().read(configFile);
         } catch (IOException exception) {
@@ -46,34 +40,28 @@ public class LocalDataExecutor {
     public void insertUserConnection(UUID uuid, String lastServer) {
         Map<String, Object> data = dataFile.toMap();
         data.put(uuid.toString(), lastServer);
-
-        TomlWriter writer = new TomlWriter();
-        String update = writer.write(data);
-
-        try {
-            Files.write(Paths.get((directory.toString() + "/" + DATA_FILE)), update.getBytes());
-            updateData();
-        } catch (IOException exception) {
-            Relink.getLogger().warn("Failed to insert into file: {}", exception.getMessage());
-        }
+        updateDataFile(data);
     }
 
     public void deleteUserConnection(UUID uuid, String lastServer) {
         Map<String, Object> data = dataFile.toMap();
         data.remove(uuid.toString());
+        updateDataFile(data);
+    }
 
+    private void updateDataFile(Map<String, Object> data) {
         TomlWriter writer = new TomlWriter();
         String update = writer.write(data);
 
         try {
             Files.write(Paths.get((directory.toString() + "/" + DATA_FILE)), update.getBytes());
-            updateData();
+            refreshData();
         } catch (IOException exception) {
-            Relink.getLogger().warn("Failed to insert into file: {}", exception.getMessage());
+            Relink.getLogger().warn("Failed to perform edit on file: {}", exception.getMessage());
         }
     }
 
-    private void updateData() {
+    private void refreshData() {
         dataFile = getData();
     }
 
