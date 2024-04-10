@@ -50,7 +50,7 @@ password = ""
     - This is required for Relink to store and retrieve player connection data.
 
 - **Local Storage Alternative**
-  - If the user wishes not to connect to a MySQL database, they can leave the values blank in under the `sql` table, and Relink will automatically switch to a local file called `data.toml` stored in the plugin folder.
+  - If the user wishes not to connect to a MySQL database, they can leave the values blank in under the `[sql]` table, and Relink will automatically switch to a local file called `data.toml` stored in the plugin folder.
 ```toml
 # Example data.toml file.
 185b9b7a-2cfc-499e-b36a-5e39d6d86e14 = "minigames"
@@ -60,7 +60,7 @@ password = ""
 ```
 
 ## Usage
-Users need to specify which servers are linked by Relink and provide the SQL database details. Once configured, Relink will seamlessly relink players to their last visited server within the network.
+Users need to specify which servers are linked by Relink in the `[proxy]` table accordingly. Once configured, Relink will seamlessly relink players to their last visited server within the network. To retrieve the name of servers in your velocity network, check your `velocity.toml` configuration file in your velocity proxy under the `[servers]` table.
 
 ## Contributing
 Feel free to contribute to this project by submitting bug reports, feature requests, or pull requests on the [GitHub repository](https://github.com/hello-andrew-yan/relink).
