@@ -6,9 +6,17 @@
 </h1>
 <br>
 <p align="center">
-  <a target="_blank" href="https://icons8.com/icon/102433/broken-link">Broken Link</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
-  <br>
-  <br>
+  <a href="https://github.com/hello-andrew-yan/relink/commits/master">
+  <img src="https://img.shields.io/github/last-commit/hello-andrew-yan/relink.svg?style=flat-square&logo=github&logoColor=white"
+       alt="GitHub last commit">
+  <a href="https://github.com/hello-andrew-yan/relink/issues">
+  <img src="https://img.shields.io/github/issues-raw/hello-andrew-yan/relink.svg?style=flat-square&logo=github&logoColor=white"
+       alt="GitHub issues">
+  <a href="https://github.com/hello-andrew-yan/relink/pulls">
+  <img src="https://img.shields.io/github/issues-pr-raw/hello-andrew-yan/relink.svg?style=flat-square&logo=github&logoColor=white"
+       alt="GitHub pull requests">
+</p>
+<p align="center">
   Relink is a utility plugin designed for Velocity, a proxy server for Minecraft.
   It will automatically relink players to their previously connected server within the network seamlessly.
 </p>
@@ -69,3 +77,9 @@ Feel free to contribute to this project by submitting bug reports, feature reque
 
 ## License
 This project is licensed under the [MIT License](LICENSE).
+
+---
+
+<p align="right">
+  <a target="_blank" href="https://icons8.com/icon/102433/broken-link">Broken Link</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
+</p>
