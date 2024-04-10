@@ -8,7 +8,7 @@ import io.github.helloandrewyan.relink.Relink;
 
 import java.util.UUID;
 
-public class ConnectionListener {
+public class SQLConnectionListener {
     @Subscribe
     private void validateConnection(PostLoginEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();

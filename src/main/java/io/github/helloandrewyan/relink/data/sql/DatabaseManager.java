@@ -1,4 +1,4 @@
-package io.github.helloandrewyan.relink.database;
+package io.github.helloandrewyan.relink.data.sql;
 
 import io.github.helloandrewyan.relink.Relink;
 

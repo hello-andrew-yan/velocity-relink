@@ -13,6 +13,6 @@ public class Test {
         Relink.getLogger().info(Relink.getSqlExecutor().getUserConnection(uuid));
         Relink.getSqlExecutor().insertUserConnection(uuid, "minigames");
         Relink.getLogger().info(Relink.getSqlExecutor().getUserConnection(uuid));
-        Relink.getSqlExecutor().deleteUserConnection(uuid);
+        //Relink.getSqlExecutor().deleteUserConnection(uuid);
     }
 }

@@ -1,14 +1,19 @@
-package io.github.helloandrewyan.relink.database;
+package io.github.helloandrewyan.relink.data.sql;
+
+import io.github.helloandrewyan.relink.Relink;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class SQLQueries {
-    public static final String TABLE_NAME = "relink";
-    public static final String UUID_COLUMN = "uuid";
-    public static final String LAST_SERVER_COLUMN = "last_server";
+    private static final String TABLE_NAME = "relink";
+    private static final String UUID_COLUMN = "uuid";
+    private static final String LAST_SERVER_COLUMN = "last_server";
     public static String TABLE_EXISTS_STATEMENT = "SELECT EXISTS ("
-                + " SELECT 1 "
-                + " FROM information_schema.TABLES "
-                + " WHERE TABLE_SCHEMA = ? "
-                + " AND TABLE_NAME = ?) AS table_exists;";
+            + " SELECT 1 "
+            + " FROM information_schema.TABLES "
+            + " WHERE TABLE_SCHEMA = ? "
+            + " AND TABLE_NAME = '" + TABLE_NAME + "') AS table_exists;";
 
     public static String CREATE_TABLE_STATEMENT = "CREATE TABLE "
             + TABLE_NAME + " ("
@@ -31,4 +36,16 @@ public class SQLQueries {
     public static String SELECT_STATEMENT = "SELECT " + LAST_SERVER_COLUMN
                 + " FROM " + TABLE_NAME
                 + " WHERE " + UUID_COLUMN + " = ?;";
+
+    public static String getUserConnection(ResultSet resultSet) {
+        try {
+            if (resultSet.next()) {
+                return resultSet.getString(SQLQueries.LAST_SERVER_COLUMN);
+            }
+            return null;
+        } catch (SQLException exception) {
+            Relink.getLogger().warn("Failed to query user connection: {}", exception.getMessage());
+            return null;
+        }
+    }
 }

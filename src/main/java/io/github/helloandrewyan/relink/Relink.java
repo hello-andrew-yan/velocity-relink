@@ -9,9 +9,10 @@ import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
-import io.github.helloandrewyan.relink.database.DatabaseManager;
-import io.github.helloandrewyan.relink.database.SQLExecutor;
-import io.github.helloandrewyan.relink.listeners.ConnectionListener;
+import io.github.helloandrewyan.relink.data.sql.DatabaseManager;
+import io.github.helloandrewyan.relink.data.sql.SQLExecutor;
+import io.github.helloandrewyan.relink.listeners.LocalConnectionListener;
+import io.github.helloandrewyan.relink.listeners.SQLConnectionListener;
 import io.github.helloandrewyan.relink.temp.Test;
 import org.slf4j.Logger;
 
@@ -72,24 +73,31 @@ public class Relink {
         getProxyServers();
 
         Toml config = getConfig();
-        if (config == null || config.isEmpty() || !validateProxy(config) || !validateSQL(config)) return;
+        if (config == null || config.isEmpty() || !validateProxy(config)) return;
 
-        String url = config.getTable(CONFIG_SQL_TABLE).getString("url");
-        String username = config.getTable(CONFIG_SQL_TABLE).getString("username");
-        String password = config.getTable(CONFIG_SQL_TABLE).getString("password");
+        if (validateSQL(config)) {
+            String url = config.getTable(CONFIG_SQL_TABLE).getString("url");
+            String username = config.getTable(CONFIG_SQL_TABLE).getString("username");
+            String password = config.getTable(CONFIG_SQL_TABLE).getString("password");
 
-        databaseManager = new DatabaseManager(url, username, password);
-        sqlExecutor = new SQLExecutor(databaseManager);
-        server.getEventManager().register(this, new ConnectionListener());
+            databaseManager = new DatabaseManager(url, username, password);
+            sqlExecutor = new SQLExecutor(databaseManager);
+            server.getEventManager().register(this, new SQLConnectionListener());
 
-        Test test = new Test();
-        test.testExecutor();
+            Test test = new Test();
+            test.testExecutor();
+        } else {
+            logger.info("SQL connection could not be made, switching to local file.");
+            server.getEventManager().register(this, new LocalConnectionListener());
+        }
     }
 
     @Subscribe
     public void onProxyShutdown(ProxyShutdownEvent event) {
-        logger.info("Shutting down database connection.");
-        databaseManager.closeConnection();
+        if (databaseManager != null) {
+            logger.info("Shutting down database connection.");
+            databaseManager.closeConnection();
+        }
     }
 
     private void getProxyServers() {

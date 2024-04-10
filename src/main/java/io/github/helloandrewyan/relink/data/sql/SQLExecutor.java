@@ -1,4 +1,4 @@
-package io.github.helloandrewyan.relink.database;
+package io.github.helloandrewyan.relink.data.sql;
 
 import io.github.helloandrewyan.relink.Relink;
 
@@ -32,8 +32,8 @@ public class SQLExecutor {
         try {
             statement = connection.prepareStatement(SQLQueries.TABLE_EXISTS_STATEMENT);
             statement.setString(1, connection.getCatalog());
-            statement.setString(2, SQLQueries.TABLE_NAME);
             resultSet = statement.executeQuery();
+
             boolean tableExists = resultSet.next() && resultSet.getBoolean("table_exists");
             if (!tableExists) {
                 Relink.getLogger().info("Relink table not found. Generating new table.");
@@ -79,10 +79,7 @@ public class SQLExecutor {
             statement.setString(1, uuid.toString());
             resultSet = statement.executeQuery();
 
-            if (resultSet.next()) {
-                return resultSet.getString(SQLQueries.LAST_SERVER_COLUMN);
-            }
-            return null;
+            return SQLQueries.getUserConnection(resultSet);
         } catch (SQLException exception) {
             Relink.getLogger().warn("Failed to query user connection: {}", exception.getMessage());
             return null;
