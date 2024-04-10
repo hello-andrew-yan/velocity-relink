@@ -6,7 +6,7 @@
 
     <groupId>io.github.hello.andrew.yan</groupId>
     <artifactId>relink</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.17-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>relink</name>
