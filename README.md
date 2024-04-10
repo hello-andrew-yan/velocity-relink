@@ -41,9 +41,6 @@ password = ""
 
 #####################################################
 ```
-
-
-
 - **Proxy Servers** (`[proxy]`)
     - Define the list of servers that are linked by Relink.
     - Default values are provided based on the default servers in the network upon first installation.
@@ -51,6 +48,16 @@ password = ""
 - **SQL Database Connection** (`[sql]`)
     - Specify the URL, username, and password for the SQL database.
     - This is required for Relink to store and retrieve player connection data.
+
+- **Local Storage Alternative**
+  - If the user wishes not to connect to a MySQL database, they can leave the values blank in under the `sql` table, and Relink will automatically switch to a local file called `data.toml` stored in the plugin folder.
+```toml
+# Example data.toml file.
+185b9b7a-2cfc-499e-b36a-5e39d6d86e14 = "minigames"
+1638e0cf-9204-4b56-b888-07edb1d4a803 = "minigames"
+02395569-dc0a-403c-a01d-dbf49e98f855 = "factions"
+2137687a-e10d-462b-b574-86d309277146 = "hub"
+```
 
 ## Usage
 Users need to specify which servers are linked by Relink and provide the SQL database details. Once configured, Relink will seamlessly relink players to their last visited server within the network.
