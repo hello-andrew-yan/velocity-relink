@@ -61,6 +61,7 @@
                 <filtering>true</filtering>
                 <includes>
                     <include>config.toml</include>
+                    <include>data.toml</include>
                 </includes>
             </resource>
         </resources>

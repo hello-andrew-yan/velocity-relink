@@ -9,6 +9,7 @@ import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
+import io.github.helloandrewyan.relink.data.local.LocalDataExecutor;
 import io.github.helloandrewyan.relink.data.sql.DatabaseManager;
 import io.github.helloandrewyan.relink.data.sql.SQLExecutor;
 import io.github.helloandrewyan.relink.listeners.LocalConnectionListener;
@@ -55,6 +56,7 @@ public class Relink {
             new HashSet<>(Arrays.asList("mysql", "postgresql", "oracle"));
     private static Logger logger;
     private static SQLExecutor sqlExecutor;
+    private static LocalDataExecutor localDataExectutor;
     private final ProxyServer server;
     private final Path directory;
     private final Map<String, RegisteredServer> proxy = new HashMap<>();
@@ -73,23 +75,26 @@ public class Relink {
         getProxyServers();
 
         Toml config = getConfig();
-        if (config == null || config.isEmpty() || !validateProxy(config)) return;
+        if (config == null || config.isEmpty() || !validateProxy(config) || !validateSQL(config)) return;
 
-        if (validateSQL(config)) {
-            String url = config.getTable(CONFIG_SQL_TABLE).getString("url");
-            String username = config.getTable(CONFIG_SQL_TABLE).getString("username");
-            String password = config.getTable(CONFIG_SQL_TABLE).getString("password");
+        String url = config.getTable(CONFIG_SQL_TABLE).getString("url");
+        String username = config.getTable(CONFIG_SQL_TABLE).getString("username");
+        String password = config.getTable(CONFIG_SQL_TABLE).getString("password");
 
-            databaseManager = new DatabaseManager(url, username, password);
-            sqlExecutor = new SQLExecutor(databaseManager);
-            server.getEventManager().register(this, new SQLConnectionListener());
+        Test test = new Test();
+        databaseManager = new DatabaseManager(url, username, password);
 
-            Test test = new Test();
-            test.testExecutor();
-        } else {
+        if (databaseManager.getConnection() == null) {
             logger.info("SQL connection could not be made, switching to local file.");
+            localDataExectutor = new LocalDataExecutor(directory);
             server.getEventManager().register(this, new LocalConnectionListener());
+            test.testLocalExecutor();
+            return;
         }
+
+        sqlExecutor = new SQLExecutor(databaseManager);
+        server.getEventManager().register(this, new SQLConnectionListener());
+        test.testSQLExecutor();
     }
 
     @Subscribe
@@ -193,5 +198,9 @@ public class Relink {
     }
     public static SQLExecutor getSqlExecutor() {
         return sqlExecutor;
+    }
+
+    public static LocalDataExecutor getLocalDataExecutor() {
+        return localDataExectutor;
     }
 }

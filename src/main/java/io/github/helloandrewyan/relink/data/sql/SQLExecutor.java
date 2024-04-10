@@ -13,7 +13,7 @@ public class SQLExecutor {
     public SQLExecutor(DatabaseManager databaseManager) {
         try {
             this.connection = databaseManager.getConnection();
-            initialiseTable();
+            if (connection != null) initialiseTable();
         } catch (NullPointerException exception) {
             Relink.getLogger().warn("Failed to create statement from connection: {}", exception.getMessage());
         }
