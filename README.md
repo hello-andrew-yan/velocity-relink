@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icon.png" alt="Link Icon">
+  <img src="assets/icon.png" alt="Relink Icon">
 </p>
 <h1 align="center">
   Relink
