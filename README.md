@@ -71,7 +71,7 @@ Users are stored via their UUID's followed by the name of the server under the V
 Users need to specify which servers are linked by Relink in the `[proxy]` table accordingly. Once configured, Relink will seamlessly relink players to their last visited server within the network. To retrieve the name of servers in your velocity network, check your `velocity.toml` configuration file in your velocity proxy under the `[servers]` table.
 
 ## Contributing
-Feel free to contribute to this project by submitting bug reports, feature requests, or pull requests on the [GitHub repository](https://github.com/hello-andrew-yan/relink).
+Feel free to contribute to this project by submitting bug reports, feature requests, or pull requests on the [GitHub repository](https://github.com/hello-andrew-yan/velocity-relink).
 
 ## License
 This project is licensed under the [MIT License](LICENSE).
